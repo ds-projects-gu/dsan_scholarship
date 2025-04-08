@@ -1,0 +1,309 @@
+---
+format:
+  closeread-html:
+    theme: styles/customs.scssls
+    cr-style:
+      section-background-color: "#f9f9f2"  
+      narrative-font-family: sans-serif
+      narrative-text-color-sidebar: "#ffffff"  
+      narrative-background-color-sidebar: "#A9A9A9"  
+      narrative-background-color-overlay: "#7393B3"  
+      narrative-text-color-overlay: "#FFFDD0"  
+      narrative-border-radius: "5px"  
+      narrative-overlay-max-width: "70%"  
+      narrative-outer-margin: "10px"  
+      narrative-font-size: "1.2rem"  
+    embed-resources: true
+    remove-header-space: true
+    code-tools: false
+---  
+
+
+::::{.cr-section layout="overlay-center"}
+
+
+:::{#cr-news}
+![](images/dsan_scholarship.png){max-width=100;max-height=100}
+:::
+
+Scroll down to read more about major global incidents of violence against aid workers from January 1997 - Febraury 2025. @cr-news
+
+Let's start by looking at the total number of incidents. [@cr-news]{pan-to="90%,-5%" scale-by="5"}
+::::
+
+
+::::{.cr-section}
+:::{#cr-total}
+![](images/total_incidents.png)
+:::
+
+An incident is an event or attack of major violence against aid workers. Major violence includes acts	with	the	following	outcomes:	kidnapping,	killing,	wounding	(i.e.	serious	injury	requiring	medical	attention),	rape	and	sexual	assault. [@cr-total]{pan-to="0%,-50%" scale-by="2"}
+
+"Aid workers are	defined	as the	employees	and	associated	personnel (paid	and volunteers) of	not-forprofit	aid	agencies	(both	national	and	international)	that	provide	material	and	technical	assistance	in	humanitarian	relief	contexts." - Aid Worker Security Database Codebook February 2025[@cr-total]{pan-to="0%,0%" scale-by="2"}
+
+From 1997 to the end of February 2025, there were 4,337 attacks against aid workers.  [@cr-total]{pan-to="0%, 50%" scale-by="2"}
+
+Let's break this up by year. [@cr-total]{pan-to="0%,0%"}
+
+
+```{r warning=F, echo=F, message=F, results='hide'}
+source("eda.R")
+
+incidents <- read.csv("security_incidents.csv")
+```
+
+There were some peaks over the years, mostly in 2008, 2013, 2020, and 2024. Overall, we see an upward trajectory in the number of incidents over time, with 2024 having 938.2% more incidents than in 1997. The drop seen in 2025 is due to data only available for the first two months of the year.  @cr-year
+
+::: {#cr-year}
+```{r warning=F, echo=F, message=F}
+
+incidents$"Total.affected" <- as.numeric(gsub(",", "", incidents$"Total.affected"))
+
+line_data <- incidents %>%
+  group_by(Year) %>%
+  summarise(
+    Incidents = n(),
+    Total_Affected = sum(Total.affected, na.rm = TRUE)
+  ) %>%
+  pivot_longer(
+    cols = c(Incidents, Total_Affected),
+    names_to = "Metric",
+    values_to = "value"
+  )
+
+# only total incident
+year_line_chart(line_data, "Incidents from 1997 - Feb. 2025", "Total Incidents per Year", metrics = "Incidents")
+```
+:::
+
+One act of major violence could result in more than one aid worker being affected though. Let's see how the number of attacks compare to total number of people affected for each year. @cr-year-affected
+
+::: {#cr-year-affected}
+```{r warning=F, echo=F, message=F}
+year_line_chart(line_data, "Incidents and Total Affected", metrics = c("Incidents", "Total_Affected"))
+
+```
+:::
+
+Not only are the number of attacks increasing, but the amount of aid workers harmed during each attack is increasing. For example, in 2024, there were 362 more aid workers affected than the number of incidents. [@cr-year-diff]
+
+::: {#cr-year-diff}
+```{r warning=F, echo=F, message=F}
+plot_difference_bar(incidents)
+```
+:::
+
+Let's deep dive into 2024, where there is both the largest number of incidents and most aid workers affected per incident. [@cr-year-diff-2024]
+
+::: {#cr-year-diff-2024}
+```{r warning=F, echo=F, message=F}
+plot_difference_bar(incidents, highlight_2024 = TRUE)
+```
+:::
+
+
+These are the top 5 countries with most number of attacks 2024 and the types of attacks that make of these incidents.  [@cr-2024-attacks]
+
+::: {#cr-2024-attacks}
+```{r warning=F, echo=F, message=F}
+plot_top_countries_by_attack_2024(incidents, top_n = 5)
+```
+:::
+
+Here we can see how the top attack types from the five countries with the most incidents in 2024 — Occupied Palestinian Territories, South Sudan, Sudan, Nigeria, and Lebanon — resulted in different types of harm to aid workers. [@cr-2024-sankey]
+
+::: {#cr-2024-sankey}
+```{r warning=F, echo=F, message=F}
+plot_attack_impact_sankey_top_countries_2024(incidents)
+```
+:::
+
+Aerial Bombardment, Shelling, and Shooting are the deadliest type of attacks (aside from attack types that were recorded as "unknown"). What are the motives driving these attacks? [@cr-2024-sankey]
+
+Still looking at the same 5 countries, motives behind attacks that cost the most lives include: Disputed, Economic, Incidental, Political, and Unknown. [@cr-motive]
+
+::: {#cr-motive}
+```{r warning=F, echo=F, message=F}
+plot_deadly_motive_sankey_2024(incidents)
+```
+:::
+::::
+
+```{r warning=F, echo=F, message=F}
+# incident_points <- render_cluster_leaflet_map(incidents)
+# ojs_define(incident_points)
+
+library(dplyr)
+library(jsonlite)
+
+incident_points <- incidents %>%
+  filter(!is.na(Latitude), !is.na(Longitude)) %>%
+  transmute(
+    lat = Latitude,
+    lon = Longitude,
+    popup_text = paste0("Country: ", Country, "<br>",
+                        "Motive: ", Motive, "<br>",
+                        "Attack: ", `Means.of.attack`, "<br>",
+                        "Year: ", Year),
+    year = Year,
+    motive = Motive,
+    attack = Means.of.attack
+  )
+
+motive_types <- unique(incidents$Motive)
+motive_types <- motive_types[motive_types != ""]
+
+attack_types <- unique(incidents$Means.of.attack)
+attack_types <- attack_types[attack_types != ""]
+
+ojs_define(incident_points = toJSON(incident_points))
+ojs_define(motive_types = motive_types)
+ojs_define(attack_types = attack_types)
+
+```
+
+```{ojs}
+import {Inputs} from "@observablehq/inputs"
+import {interval} from "@mootari/range-slider"
+// Double-sided year filter (range slider)
+year_range_def = interval([1997, 2025], {
+    value: [1997, 2025],
+    step: 1,
+    label: "Select Years"
+  });
+
+select_motive_def = Inputs.select(motive_types, {value: motive_types, multiple: true, label: "Motive"});
+
+select_attack_def = Inputs.select(attack_types, {value: attack_types, multiple: 4, label: "Attack Type"});
+
+
+inc_map = {
+  const map = L.map("map").setView([20, 0], 2);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  return map
+}
+
+```
+
+<br>
+[**A Note on Unknown or Ambiguous Data**]{.smallcaps}
+
+There is a large amount of "Unknown" data seen in the attacks (11.8% to be exact) and ambiguity for the motives. These gaps reflect the challenging environments in which aid workers operate, where the immediate priority is saving lives and responding to crises, not comprehensive data collection. While these limitations reduce analytic precision, they also highlight the need for systems that support rapid response and post-incident reporting without placing additional burden on those in the field.
+
+<br>
+
+::::{.cr-section layout="overlay-center" style="background: rgba(255,255,255,0.7); pointer-events: none;"}
+[**Below is a map of all the incidents. You can filter by year, motive of attack, and type of attack. To select more than one motive and attack type, hold shift while selecting.**]{.smallcaps}
+::::
+
+[@cr-incident]
+
+:::{#cr-incident}
+```{ojs}
+html`
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+  />`
+
+html`<div id="map" style="height: 500px; width: 1000px"></div>`
+html`
+  <div style="display: flex; gap: 2rem; position: absolute">
+    <div id="slider-container"></div>
+    <div id="checkbox-container"></div>
+    <div id="attack-container"></div>
+  </div>
+`
+render = {
+  document.getElementById("slider-container").append(year_range_def)
+  document.getElementById("checkbox-container").append(select_motive_def)
+  document.getElementById("attack-container").append(select_attack_def)
+}
+
+viewof year_range = year_range_def
+viewof select_motive = select_motive_def
+viewof select_attack = select_attack_def
+
+
+// Wait until DOM element is created
+viewof map =  {
+    // Load MarkerCluster plugin CSS & JS
+  await require("https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js")
+  
+  // Remove existing layers before re-adding
+  inc_map.eachLayer(layer => {
+    if (layer instanceof L.MarkerClusterGroup || layer instanceof L.Marker) {
+      inc_map.removeLayer(layer)
+    }
+  });
+
+  // Filter points by Year
+  const points = JSON.parse(incident_points)
+  let filteredPoints = points.filter(d => {
+      const y = +d.year
+      return y >= year_range[0] && y <= year_range[1]
+    })
+  if (select_motive) {
+    filteredPoints = filteredPoints.filter(d => {
+      const motive = d.motive
+      return select_motive.includes(motive)
+    })
+  }
+  if (select_attack) {
+    filteredPoints = filteredPoints.filter(d => {
+      const attack = d.attack
+      return select_attack.includes(attack)
+    })
+  }
+  const useClustering = true;
+  if (useClustering) {
+    const markers = L.markerClusterGroup()
+
+    filteredPoints.forEach(d => {
+      if (d.lat && d.lon) {
+        const marker = L.marker([+d.lat, +d.lon])
+          .bindPopup(d.popup_text)
+        markers.addLayer(marker)
+      }
+    });
+    inc_map.addLayer(markers)
+  } else {
+    filteredPoints.forEach(d => {
+      if (d.lat && d.lon) {
+        L.marker([+d.lat, +d.lon]).bindPopup(d.popup_text).addTo(inc_map)
+      }
+    });
+  }
+  return inc_map;
+};
+```
+:::
+
+<br>
+<br>
+<br>
+<br>
+<br>
+
+[**Conclusions and Recommendations**]{.smallcaps}
+
+The amount of attacks on aid workers has steady increased since 1997 and each attack is resulting in more people being kidnapped, wounded or killed. In 2024, there were a record number of recorded incidents and affected aid workers. In the 5 countries with the highest number of incidents, aerial bombarment was the most common attack, and also most deadliest attack. Disputed, incidental, and unknown are the main motives recorded for aerial bombardment. 
+
+Knowing what the most common type of attack is and the motivations behind it can help aid agencies inform, prepare, and equip aid workers to minimize risk in the field. Agencies operating in high-risk countries should prioritize training protocols and protective measures specifically for aerial bombardments, including shelter access, early-warning systems, and real-time threat monitoring. Policymakers must advocate for stricter enforcement of international humanitarian law and support conflict resolution initiatives that target the root causes of violence. Although there are limitations in the data, the lives of those delivering humanitarian aid can be better protected by knowing where and how aid workers are most at risk, and understanding the recent patterns of violence — even when motives are unclear — and using that knowledge to inform field preparedness, advocacy, and response protocols.
+
+<br> 
+
+[**References**]{.smallcaps}
+
+All defintions referenced from the Aid Worker Security Database Codebook February 2025 
+
+ChatGPT used for code debugging and map functionality
+
+Scrollytelly inspiration from Beyond the Modifiable Areal Unit Problem!, by François Sémécurbe and EURO 2024 Final Scrollytelling Analysis – by Óscar Bartolomé Pato 
+
