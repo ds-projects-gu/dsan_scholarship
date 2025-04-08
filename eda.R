@@ -28,9 +28,16 @@ library(ggrepel)
 year_line_chart <- function(data, title, subtitle, metrics = NULL) {
   plot_data <- data
 
+
+
   if (!is.null(metrics)) {
     plot_data <- plot_data %>% filter(Metric %in% metrics)
   }
+
+  plot_data <- plot_data %>%
+    mutate(Metric = recode(Metric,
+                          "Total_Affected" = "Total Affected",
+                          "Incidents" = "Incidents"))
 
   plot <- ggplot(plot_data, aes(x = Year, y = value, group = Metric)) +
     geom_line(size = 1.2, alpha = 0.85) +
@@ -409,20 +416,20 @@ render_cluster_leaflet_map <- function(data,
 library(ggiraph)
 year_line_chart <- function(data, title, subtitle = NULL, metrics = NULL) {
   plot_data <- data
-
   if (!is.null(metrics)) {
     plot_data <- plot_data %>% filter(Metric %in% metrics)
   }
 
-  # Filter important labels only
+  plot_data <- plot_data %>%
+    mutate(Metric = case_when(
+      Metric == "Total_Affected" ~ "Total Affected",
+      TRUE ~ Metric
+    ))
+
+  label_years <- c(2024)
+
   label_data <- plot_data %>%
-    group_by(Metric) %>%
-    filter(
-      Year %% 5 == 0 |
-      Year == min(Year) |
-      Year == max(Year) |
-      value == max(value)
-    )
+    filter(Year %in% label_years)
 
   plot <- ggplot(plot_data, aes(x = Year, y = value, color = Metric, group = Metric)) +
     geom_line(size = 1.2, alpha = 0.85) +
@@ -435,7 +442,7 @@ year_line_chart <- function(data, title, subtitle = NULL, metrics = NULL) {
     box.padding = 0.4,
     point.padding = 0.3,
     segment.color = NA,
-    nudge_y = ifelse(label_data$Metric == "Total_Affected", 15, -15),
+    nudge_y = 15,
     show.legend = FALSE,
     max.overlaps = Inf
     ) +
@@ -483,7 +490,7 @@ top_attack_by_country <- incidents %>%
       select(Country, `Means.of.attack`, Count, Total, Percent)
   }()
 
-print(top_attack_by_country)
+#print(top_attack_by_country)
 
 missing_summary <- incidents %>%
     group_by(Year) %>%
@@ -493,7 +500,7 @@ missing_summary <- incidents %>%
         .groups = "drop"
     )
 
-print(missing_summary)
+#print(missing_summary)
 
 unknown_attack <- incidents %>%
   summarise(
@@ -502,4 +509,4 @@ unknown_attack <- incidents %>%
     percent_unknown = round(unknown / total * 100, 1)
   )
 
-print(unknown_attack)
+#print(unknown_attack)
