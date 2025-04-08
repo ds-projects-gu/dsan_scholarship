@@ -25,48 +25,46 @@ year_bar_chart <- function(data, title, subtitle) {
 }
 library(ggrepel)
 
-year_line_chart <- function(data, title, subtitle, metrics = NULL) {
-  plot_data <- data
+# year_line_chart <- function(data, title, subtitle, metrics = NULL) {
+#   plot_data <- data
 
+#   if (!is.null(metrics)) {
+#     plot_data <- plot_data %>% filter(Metric %in% metrics)
+#   }
 
+#   plot_data <- plot_data %>%
+#     mutate(Metric = recode(Metric,
+#                           "Total_Affected" = "Total Affected",
+#                           "Incidents" = "Incidents"))
 
-  if (!is.null(metrics)) {
-    plot_data <- plot_data %>% filter(Metric %in% metrics)
-  }
+#   plot <- ggplot(plot_data, aes(x = Year, y = value, group = Metric)) +
+#     geom_line(size = 1.2, alpha = 0.85) +
+#     ggrepel::geom_text_repel(
+#       aes(label = value),
+#       size = 4.5,
+#       show.legend = FALSE,
+#       max.overlaps = Inf,
+#       box.padding = 0.3,
+#       point.padding = 0.2,
+#       color = "black",
+#     ) +
+#     labs(title = title, subtitle = subtitle, color = NULL) +
+#     theme_minimal(base_family = "sans") +
+#     theme(
+#       panel.background = element_rect(fill = "transparent", color = NA),
+#       plot.background = element_rect(fill = "transparent", color = NA),
+#       legend.background = element_rect(fill = "transparent", color = NA),
+#       plot.title = element_text(size = 18, face = "bold"),
+#       plot.subtitle = element_text(size = 14),
+#       axis.title.x = element_blank(),
+#       axis.title.y = element_blank(),
+#       axis.text = element_text(size = 12),
+#       axis.text.x = element_text(angle = 45, hjust = 1),
+#       legend.text = element_text(size = 12)
+#     )
 
-  plot_data <- plot_data %>%
-    mutate(Metric = recode(Metric,
-                          "Total_Affected" = "Total Affected",
-                          "Incidents" = "Incidents"))
-
-  plot <- ggplot(plot_data, aes(x = Year, y = value, group = Metric)) +
-    geom_line(size = 1.2, alpha = 0.85) +
-    ggrepel::geom_text_repel(
-      aes(label = value),
-      size = 4.5,
-      show.legend = FALSE,
-      max.overlaps = Inf,
-      box.padding = 0.3,
-      point.padding = 0.2,
-      color = "black",
-    ) +
-    labs(title = title, subtitle = subtitle, color = NULL) +
-    theme_minimal(base_family = "sans") +
-    theme(
-      panel.background = element_rect(fill = "transparent", color = NA),
-      plot.background = element_rect(fill = "transparent", color = NA),
-      legend.background = element_rect(fill = "transparent", color = NA),
-      plot.title = element_text(size = 18, face = "bold"),
-      plot.subtitle = element_text(size = 14),
-      axis.title.x = element_blank(),
-      axis.title.y = element_blank(),
-      axis.text = element_text(size = 12),
-      axis.text.x = element_text(angle = 45, hjust = 1),
-      legend.text = element_text(size = 12)
-    )
-
-  return(plot)
-}
+#   return(plot)
+# }
 
 plot_difference_bar <- function(data,
                                 title = "Difference between Total Affected and Incidents",
@@ -414,7 +412,7 @@ render_cluster_leaflet_map <- function(data,
 # # Register Exo 2 from Google Fonts
 # gdtools::register_gfont("Exo 2")
 library(ggiraph)
-year_line_chart <- function(data, title, subtitle = NULL, metrics = NULL) {
+year_line_chart <- function(data, title, subtitle = NULL, metrics = NULL, simple_labels = FALSE) {
   plot_data <- data
   if (!is.null(metrics)) {
     plot_data <- plot_data %>% filter(Metric %in% metrics)
@@ -426,7 +424,11 @@ year_line_chart <- function(data, title, subtitle = NULL, metrics = NULL) {
       TRUE ~ Metric
     ))
 
-  label_years <- c(2024)
+  if (simple_labels) {
+    label_years <- c(2024)
+  } else {
+    label_years <- c(1997, 2008, 2013, 2020, 2024)
+  }
 
   label_data <- plot_data %>%
     filter(Year %in% label_years)
